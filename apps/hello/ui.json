@@ -911,6 +911,48 @@
                 "click": "handle_story_download"
             },
             "visible": true
+        },
+        "4j3nqndyzjfi0y92": {
+            "id": "4j3nqndyzjfi0y92",
+            "type": "custom_bubblemessage",
+            "content": {
+                "text": "hello fabien"
+            },
+            "parentId": "9c30af6d-4ee5-4782-9169-0f361d67fa76",
+            "position": 5,
+            "handlers": {},
+            "visible": true
+        },
+        "eb01mbw98v6e5gfu": {
+            "id": "eb01mbw98v6e5gfu",
+            "type": "custom_aggrid",
+            "content": {},
+            "parentId": "c6392876-7cfd-4680-8725-b04f43ff294f",
+            "position": 5,
+            "handlers": {},
+            "visible": true
+        },
+        "epbehg1lst4mhreq": {
+            "id": "epbehg1lst4mhreq",
+            "type": "vegalitechart",
+            "content": {
+                "spec": "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\",\"data\":{\"values\":[{\"a\":\"A\",\"b\":10000},{\"a\":\"B\",\"b\":200},{\"a\":\"C\",\"b\":150},{\"a\":\"D\",\"b\":300}]},\"mark\":\"bar\",\"encoding\":{\"x\":{\"field\":\"a\",\"type\":\"nominal\"},\"y\":{\"field\":\"b\",\"type\":\"quantitative\"}}}"
+            },
+            "parentId": "9c30af6d-4ee5-4782-9169-0f361d67fa76",
+            "position": 6,
+            "handlers": {},
+            "visible": true
+        },
+        "h1iec16m4zcqxvo6": {
+            "id": "h1iec16m4zcqxvo6",
+            "type": "custom_aggrid",
+            "content": {
+                "spec": "{\n\t\"columnDefs\": [\n\t\t{ \"headerName\": \"Make\", \"field\": \"make\" },\n\t\t{ \"headerName\": \"Model\", \"field\": \"model\" },\n\t\t{ \"headerName\": \"Price\", \"field\": \"price\" }\n\t],\n\t\"rowData\": [\n\t\t{ \"make\": \"Toyota\", \"model\": \"Celica\", \"price\": 350000 },\n\t\t{ \"make\": \"Ford\", \"model\": \"Mondeo\", \"price\": 3200000 }\n\t]\n}\n"
+            },
+            "parentId": "23bc1387-26ed-4ff2-8565-b027c2960c3c",
+            "position": 2,
+            "handlers": {},
+            "visible": true
         }
     }
 }
