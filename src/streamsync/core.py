@@ -1,5 +1,6 @@
 import contextlib
 import copy
+import dataclasses
 import datetime
 import inspect
 import logging
@@ -7,6 +8,7 @@ import secrets
 import sys
 import time
 import traceback
+import typing
 from typing import Any, Callable, Dict, List, Literal, Optional, Set, Tuple, Union
 import urllib.request
 import base64
@@ -14,8 +16,11 @@ import io
 import re
 import json
 import math
+
 from streamsync.ss_types import Readable, InstancePath, StreamsyncEvent, StreamsyncEventResult, StreamsyncFileItem
 
+if typing.TYPE_CHECKING:
+    from streamsync.serdes import Serdes
 
 class Config:
 
@@ -80,22 +85,24 @@ class StateSerialiserException(ValueError):
     pass
 
 
+@dataclasses.dataclass
 class StateSerialiser:
+    _serdes: List['Serdes'] = dataclasses.field(default_factory=list)
+    _lookup_serdes: Dict[str, 'Serdes'] = dataclasses.field(default_factory=dict)
+
+    def serdes_register(self, serdes: 'Serdes') -> None:
+        self._serdes.insert(0, serdes)
+        self._lookup_serdes[serdes.targetting_type] = serdes
+
+    def serdes_reset(self):
+        self._serdes = []
+        self._lookup_serdes = {}
 
     """
     Serialises user state values before sending them to the front end.
     Provides JSON-compatible values, including data URLs for binary data.
     """
-
     def serialise(self, v: Any) -> Union[Dict, List, str, bool, int, float, None]:
-        if isinstance(v, StateProxy):
-            return self._serialise_dict_recursively(v.to_dict())
-        if isinstance(v, (FileWrapper, BytesWrapper)):
-            return self._serialise_ss_wrapper(v)
-        if isinstance(v, (datetime.datetime, datetime.date)):
-            return str(v)
-        if isinstance(v, bytes):
-            return self.serialise(BytesWrapper(v))
         if isinstance(v, dict):
             return self._serialise_dict_recursively(v)
         if isinstance(v, list):
@@ -105,27 +112,21 @@ class StateSerialiser:
         if v is None:
             return v
 
+        type_v = type(v)
+        serdes = self._lookup_serdes.get(f'{type_v.__module__}.{type_v.__name__}')
+        if serdes is not None:
+            return serdes.serializer(v)
+
         # Checking the MRO allows to determine object type without creating dependencies
         # to these packages
 
-        v_mro = [
-            f"{x.__module__}.{x.__name__}" for x in inspect.getmro(type(v))]
+        v_mro = [f"{x.__module__}.{x.__name__}" for x in inspect.getmro(type(v))]
 
-        if isinstance(v, (int, float)):
-            if "numpy.float64" in v_mro:
-                return float(v)
-            if math.isnan(v):
-                return None
-            return v
+        for mro_ in v_mro:
+            serdes = self._lookup_serdes.get(mro_)
+            if serdes is not None:
+                return serdes.serializer(v)
 
-        if "matplotlib.figure.Figure" in v_mro:
-            return self._serialise_matplotlib_fig(v)
-        if "plotly.graph_objs._figure.Figure" in v_mro:
-            return v.to_json()
-        if "numpy.float64" in v_mro:
-            return float(v)
-        if "numpy.ndarray" in v_mro:
-            return self._serialise_list_recursively(v.tolist())
         if "pandas.core.frame.DataFrame" in v_mro:
             return self._serialise_pandas_dataframe(v)
         if "pyarrow.lib.Table" in v_mro:
@@ -146,18 +147,6 @@ class StateSerialiser:
 
     def _serialise_ss_wrapper(self, v: Union[FileWrapper, BytesWrapper]) -> str:
         return v.get_as_dataurl()
-
-    def _serialise_matplotlib_fig(self, fig) -> str:
-        # It's safe to import matplotlib here without listing it as a dependency.
-        # If this method is called, it's because a matplotlib figure existed.
-        # Note: matplotlib type needs to be ignored since it doesn't provide types
-        import matplotlib.pyplot as plt  # type: ignore
-
-        iobytes = io.BytesIO()
-        fig.savefig(iobytes, format="png")
-        iobytes.seek(0)
-        plt.close(fig)
-        return FileWrapper(iobytes, "image/png").get_as_dataurl()
 
     def _serialise_pandas_dataframe(self, df):
         import pyarrow as pa # type: ignore
@@ -1067,10 +1056,34 @@ class EventHandler:
         return {"ok": ok, "result": result}
 
 
+@dataclasses.dataclass
+class SerdesManager:
+    """
+    Manage les serialiseurs et deserialiseurs au sein de streamsync.
+
+    Au démarrage du serveur, les serialiseurs et deserialiseurs sont enregistrés sur le manager.
+    Ils sont ensuite utilisés pour sérialiser et désérialiser les données.
+
+    """
+    _serdes: List['Serdes'] = dataclasses.field(default_factory=list)
+    _lookup_serdes: Dict[str, 'Serdes'] = dataclasses.field(default_factory=dict)
+    _lookup_serdes_per_mro: Dict[str, 'Serdes'] = dataclasses.field(default_factory=dict)
+
+    def register_serdes(self, serdes: 'Serdes') -> None:
+        self._serdes.insert(0, serdes)
+        self._lookup_serdes[serdes.targetting_type] = serdes
+        for mro in serdes.mro:
+            self._lookup_serdes_per_mro[mro] = serdes
+
+    def serialize(self, item: Any):
+        pass
+
+
 state_serialiser = StateSerialiser()
 component_manager = ComponentManager()
 initial_state = StreamsyncState()
 session_manager = SessionManager()
+serdes_manager = SerdesManager()
 
 
 def session_verifier(func: Callable) -> Callable:

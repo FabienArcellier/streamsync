@@ -17,7 +17,7 @@ from streamsync.app_runner import AppRunner
 from urllib.parse import urlsplit
 import logging
 import pathlib
-from streamsync import VERSION
+from streamsync import VERSION, serdes
 
 MAX_WEBSOCKET_MESSAGE_SIZE = 201*1024*1024
 logging.getLogger().setLevel(logging.INFO)
@@ -39,6 +39,9 @@ def get_asgi_app(
     async def lifespan(app: FastAPI):
         nonlocal app_runner
 
+        # To discuss in Code review, I am not sure if it's the
+        # best location to load the serdes from core component.
+        serdes.register_serdes_core()
         app_runner.hook_to_running_event_loop()
         app_runner.load()
 
