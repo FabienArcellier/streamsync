@@ -7,7 +7,7 @@ import statistics
 from streamsync.core import StreamsyncState
 
 # EVENT HANDLERS
-print("hello fork !!")
+print("hello fork 2 !!")
 
 def handle_timer_tick(state: StreamsyncState):
     df = state["random_df"]
