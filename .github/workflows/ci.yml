@@ -29,9 +29,14 @@ jobs:
           sudo pip install poetry
           poetry install --with build
 
-      - name: install npm environment
+      - name: install npm environment for ui
         run: |
           cd ui
+          npm install
+
+      - name: install npm environment for docs
+        run: |
+          cd docs
           npm install
 
       - name: run continuous integration pipeline
