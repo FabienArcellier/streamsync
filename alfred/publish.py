@@ -21,14 +21,14 @@ def publish():
 
     >>> $ alfred publish
     """
+    # run poetry install to ensure package metadata are up to date
+    alfred.run("poetry install", stream_stdout=False, stream_stderr=False)
+
     import streamsync
     VERSION = f"v{streamsync.VERSION}"
 
     git = alfred.sh("git", "git should be present")
     os.chdir(ROOT_DIR)
-
-    # run poetry install to update the version number
-    alfred.run("poetry install", stream_stdout=False, stream_stderr=False)
 
     # update the existing tags
     alfred.run(git, ["fetch"])
